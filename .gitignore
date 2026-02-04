@@ -40,3 +40,9 @@ yarn-error.log*
 next-env.d.ts
 
 .dev.vars
+
+.env
+__pycache__/
+*.pyc
+.DS_Store           # Mac junk
+venv/               # if you use virtual env

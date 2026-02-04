@@ -1,12 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
-const DEEPGRAM_APIKEY = process.env.DEEPGRAM_API_KEY!;
+export async function POST(request: Request) {
+  const DEEPGRAM_APIKEY = process.env.DEEPGRAM_API_KEY;
 
-// export const runtime = "edge";
+  if (!DEEPGRAM_APIKEY) {
+    return NextResponse.json({ error: 'Deepgram API key not configured' }, { status: 500 });
+  }
 
-export async function GET(request: Request) {
   const url = request.url;
 
+  // Get projects
   const projectsResponse = await fetch("https://api.deepgram.com/v1/projects", {
     method: "GET",
     headers: {
@@ -15,44 +18,41 @@ export async function GET(request: Request) {
     },
   });
 
-  const projectsResult = (await projectsResponse.json()) as {
-    projects: Array<{ project_id: string }>;
-  };
-
   if (!projectsResponse.ok) {
-    return NextResponse.json(projectsResult);
+    return NextResponse.json(await projectsResponse.json(), { status: projectsResponse.status });
   }
+
+  const projectsResult = await projectsResponse.json() as { projects: Array<{ project_id: string }> };
 
   const project = projectsResult.projects[0];
 
   if (!project) {
-    return NextResponse.json({
-      error: "Cannot find a Deepgram project. Please create a project first.",
-    });
+    return NextResponse.json({ error: "No Deepgram project found. Create one first." }, { status: 400 });
   }
 
+  // Create temporary key
   const newKeyResponse = await fetch(
     `https://api.deepgram.com/v1/projects/${project.project_id}/keys`,
     {
       method: "POST",
       headers: {
         Authorization: `Token ${DEEPGRAM_APIKEY}`,
+        "Content-Type": "application/json",
         accept: "application/json",
-        "content-type": "application/json",
       },
       body: JSON.stringify({
-        comment: "Temporary API key",
+        comment: "Temporary for app",
         scopes: ["usage:write"],
-        tags: ["next.js"],
-        time_to_live_in_seconds: 10,
+        tags: ["nextjs-app"],
+        time_to_live_in_seconds: 600, // 10 min – adjust as needed
       }),
-    },
+    }
   );
 
-  const newKeyResult = (await newKeyResponse.json()) as Record<string, unknown>;
+  const newKeyResult = await newKeyResponse.json() as Record<string, unknown>;
 
   if (!newKeyResponse.ok) {
-    return NextResponse.json(newKeyResult);
+    return NextResponse.json(newKeyResult, { status: newKeyResponse.status });
   }
 
   return NextResponse.json({ ...newKeyResult, url });

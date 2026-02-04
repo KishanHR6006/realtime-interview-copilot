@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MicOffIcon } from "lucide-react";
 import { TranscriptionSegment, TranscriptionWord } from "@/lib/types";
-
+console.log('[DEBUG] Deepgram key loaded:', process.env.DEEPGRAM_API_KEY ? 'YES (length: ' + process.env.DEEPGRAM_API_KEY.length + ')' : 'MISSING');
+console.log('[DEBUG] Gemini key loaded:', process.env.GOOGLE_GENERATIVE_AI_API_KEY ? 'YES (length: ' + process.env.GOOGLE_GENERATIVE_AI_API_KEY.length + ')' : 'MISSING');
 interface RecorderTranscriberProps {
   addTextinTranscription: (text: string) => void;
   addTranscriptionSegment?: (segment: TranscriptionSegment) => void;
@@ -69,24 +70,24 @@ export default function RecorderTranscriber({
 
       // Get API key if we don't have one
       if (!apiKey) {
-        setLoadingKey(true);
-        try {
-          const res = await fetch("/api/deepgram", { cache: "no-store" });
-          const object = await res.json();
-          if (
-            typeof object !== "object" ||
-            object === null ||
-            !("key" in object)
-          )
-            throw new Error("No api key returned");
-          setApiKey(object as CreateProjectKeyResponse);
-        } catch (e) {
-          console.error("Failed to get API key:", e);
-          setLoadingKey(false);
-          return;
-        }
-        setLoadingKey(false);
-      }
+  setLoadingKey(true);
+  try {
+    const res = await fetch("/api/deepgram", { cache: "no-store" });
+    const object = await res.json();
+    if (
+      typeof object !== "object" ||
+      object === null ||
+      !("key" in object)
+    )
+      throw new Error("No api key returned");
+    setApiKey(object as CreateProjectKeyResponse);
+  } catch (e) {
+    console.error("Failed to get API key:", e);
+    setLoadingKey(false);
+    return;
+  }
+  setLoadingKey(false);
+}
 
       // Create a fresh MediaRecorder instance
       const mic = new MediaRecorder(currentMedia);

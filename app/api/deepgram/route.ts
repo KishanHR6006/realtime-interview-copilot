@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+async function getDeepgramKey() {
   const DEEPGRAM_APIKEY = process.env.DEEPGRAM_API_KEY;
 
   if (!DEEPGRAM_APIKEY) {
     return NextResponse.json({ error: 'Deepgram API key not configured' }, { status: 500 });
   }
-
-  const url = request.url;
 
   // Get projects
   const projectsResponse = await fetch("https://api.deepgram.com/v1/projects", {
@@ -55,5 +53,13 @@ export async function POST(request: Request) {
     return NextResponse.json(newKeyResult, { status: newKeyResponse.status });
   }
 
-  return NextResponse.json({ ...newKeyResult, url });
+  return NextResponse.json(newKeyResult);
+}
+
+export async function GET() {
+  return getDeepgramKey();
+}
+
+export async function POST(request: Request) {
+  return getDeepgramKey();
 }

@@ -226,102 +226,122 @@ export function Copilot({ addInSavedData }: CopilotProps) {
   };
 
   return (
-    <div className="grid w-full gap-4 mt-12">
-      <h2 className="text-3xl underline text-green-700">
+    <div className="w-full max-w-6xl mx-auto px-4 py-6">
+      <h2 className="text-4xl font-bold text-green-700 mb-8">
         Realtime Interview Copilot
       </h2>
       {error && (
-        <div className="fixed top-0 left-0 w-full p-4 text-center text-xs bg-red-500 text-white">
+        <div className="fixed top-0 left-0 w-full p-4 text-center text-sm bg-red-500 text-white z-50">
           {error.message}
         </div>
       )}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="grid gap-1.5">
-          <Label htmlFor="system_prompt" className="text-green-800">
-            Interview Background
-          </Label>
-          <Textarea
-            id="system_prompt"
-            placeholder="Type or paste your text here."
-            className="resize-none h-[50px] overflow-hidden"
-            style={{ lineHeight: "1.5", maxHeight: "150px" }}
-            value={bg}
-            onChange={(e) => setBg(e.target.value)}
-          />
-          <RecorderTranscriber
-            addTextinTranscription={addTextinTranscription}
-            addTranscriptionSegment={addTranscriptionSegment}
-          />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Left Column - Interview Background & Recorder */}
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="system_prompt" className="text-lg font-semibold text-green-800 mb-2 block">
+              Interview Background
+            </Label>
+            <Textarea
+              id="system_prompt"
+              placeholder="Type or paste your text here."
+              className="resize-none h-32 overflow-hidden w-full"
+              style={{ lineHeight: "1.5", maxHeight: "150px" }}
+              value={bg}
+              onChange={(e) => setBg(e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <RecorderTranscriber
+              addTextinTranscription={addTextinTranscription}
+              addTranscriptionSegment={addTranscriptionSegment}
+            />
+          </div>
         </div>
 
-        <div className="grid gap-1.5 my-2">
-          <Label htmlFor="transcription" className="text-green-800">
-            Transcription{" "}
+        {/* Right Column - Transcription */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="transcription" className="text-lg font-semibold text-green-800">
+              Transcription
+            </Label>
             <button
               type="button"
-              className="text-xs text-red-500 hover:text-red-800 underline"
+              className="text-sm text-red-500 hover:text-red-800 hover:underline transition-colors"
               onClick={clearTranscriptionChange}
             >
               clear
             </button>
-          </Label>
+          </div>
           <div
             ref={transcriptionBoxRef}
-            className="mt-2 h-[225px] overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white"
+            className="h-64 overflow-y-auto border border-green-200 rounded-lg p-4 bg-white"
           >
             <TranscriptionDisplay segments={transcriptionSegments} />
           </div>
         </div>
       </div>
-      <div>
+
+      {/* Mode Selection and Process Button */}
+      <div className="bg-white border border-green-200 rounded-lg p-6 mb-8">
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="grid md:grid-cols-2 gap-2"
+          className="space-y-4"
         >
-          <div className="flex items-center justify-center w-full border">
-            <Label className="text-green-800  transition-opacity duration-300">
-              Summerizer
-              <span className="opacity-85 text-xs p-2"> (S)</span>
-            </Label>
-            <Switch
-              className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-200 m-2"
-              onCheckedChange={handleFlag}
-              defaultChecked
-              checked={flag === FLAGS.COPILOT}
-            />
-            <Label className="text-green-800  transition-opacity duration-300">
-              Copilot<span className="opacity-85 text-xs p-2"> (C)</span>
-            </Label>
-          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-4">
+              <Label className="text-green-800 font-medium">
+                Summarizer
+                <span className="text-xs text-gray-600 ml-1">(S)</span>
+              </Label>
+              <Switch
+                className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300"
+                onCheckedChange={handleFlag}
+                defaultChecked
+                checked={flag === FLAGS.COPILOT}
+              />
+              <Label className="text-green-800 font-medium">
+                Copilot
+                <span className="text-xs text-gray-600 ml-1">(C)</span>
+              </Label>
+            </div>
 
-          <Button
-            className="h-9 w-full bg-green-600 hover:bg-green-800 text-white transition-opacity duration-300"
-            size="sm"
-            variant="outline"
-            disabled={isLoading}
-            type="submit"
-            onClick={isLoading ? stop : undefined}
-          >
-            {isLoading ? "Stop" : "Process"}
-            <span className="opacity-85 text-xs p-2"> (Enter)</span>
-          </Button>
+            <Button
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 transition-colors"
+              size="sm"
+              variant="outline"
+              disabled={isLoading}
+              type="submit"
+              onClick={isLoading ? stop : undefined}
+            >
+              {isLoading ? "Stop" : "Process"}
+              <span className="text-xs text-gray-200 ml-2">(Enter)</span>
+            </Button>
+          </div>
         </form>
       </div>
 
       {/* AI Completion Section */}
-      <div className="mx-2 md:mx-10 mt-8 mb-8">
-        {completion && (
-          <button
-            type="button"
-            className="text-xs text-green-500 hover:text-green-800 underline"
-            onClick={handleSave}
-          >
-            save
-          </button>
-        )}
-        <div className="flex whitespace-pre-wrap">{completion}</div>
-      </div>
+      {completion && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-green-800">Response</h3>
+            <button
+              type="button"
+              className="text-sm text-green-600 hover:text-green-800 hover:underline transition-colors"
+              onClick={handleSave}
+            >
+              save
+            </button>
+          </div>
+          <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {completion}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

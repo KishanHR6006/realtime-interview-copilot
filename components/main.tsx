@@ -36,10 +36,10 @@ export default function MainPage() {
   }, [savedData]);
 
   return (
-    <main className="m-2 overscroll-none">
+    <div className="w-full">
       <Copilot addInSavedData={addInSavedData} />
       <QuestionAssistant />
       <History data={savedData} deleteData={deleteData} />
-    </main>
+    </div>
   );
 }

@@ -17,7 +17,9 @@ async function getDeepgramKey() {
   });
 
   if (!projectsResponse.ok) {
-    return NextResponse.json(await projectsResponse.json(), { status: projectsResponse.status });
+    const body = await projectsResponse.text().catch(() => "<unreadable body>");
+    console.error("Deepgram projects fetch failed:", projectsResponse.status, body);
+    return NextResponse.json({ error: "Deepgram projects fetch failed", details: body }, { status: projectsResponse.status });
   }
 
   const projectsResult = await projectsResponse.json() as { projects: Array<{ project_id: string }> };
@@ -47,12 +49,26 @@ async function getDeepgramKey() {
     }
   );
 
-  const newKeyResult = await newKeyResponse.json() as Record<string, unknown>;
+  const newKeyBody = await newKeyResponse.text();
+  console.log("[DEEPGRAM] Create key response status:", newKeyResponse.status);
+  console.log("[DEEPGRAM] Create key response body:", newKeyBody);
 
   if (!newKeyResponse.ok) {
-    return NextResponse.json(newKeyResult, { status: newKeyResponse.status });
+    console.error("Deepgram new key creation failed:", newKeyResponse.status, newKeyBody);
+    return NextResponse.json({ error: "Deepgram new key creation failed", status: newKeyResponse.status, details: newKeyBody }, { status: newKeyResponse.status });
   }
 
+  let newKeyResult;
+  try {
+    newKeyResult = JSON.parse(newKeyBody);
+  } catch (e) {
+    console.error("Failed to parse Deepgram response:", e);
+    return NextResponse.json({ error: "Failed to parse Deepgram response", details: newKeyBody }, { status: 500 });
+  }
+
+  console.log("[DEEPGRAM] Response keys:", Object.keys(newKeyResult));
+  console.log("[DEEPGRAM] Full response:", JSON.stringify(newKeyResult));
+  
   return NextResponse.json(newKeyResult);
 }
 

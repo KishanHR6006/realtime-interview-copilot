@@ -57,13 +57,22 @@ export default function RecorderTranscriber({
     } else {
       // Start listening
       if (!userMedia) {
-        const media = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true,
-        });
-        media.getVideoTracks().forEach((track) => track.stop());
-        currentMedia = media;
-        setUserMedia((_) => media);
+        try {
+          const media = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+            video: false,
+          });
+          currentMedia = media;
+          setUserMedia((_) => media);
+        } catch (error) {
+          console.error("Microphone access denied or not available:", error);
+          alert("Please allow microphone access to use this feature.");
+          return;
+        }
       }
 
       if (!currentMedia) return;
@@ -74,12 +83,15 @@ export default function RecorderTranscriber({
   try {
     const res = await fetch("/api/deepgram", { cache: "no-store" });
     const object = await res.json();
+    console.log("[RECORDER] API response:", object);
+    console.log("[RECORDER] Has 'key'?:", "key" in object);
+    console.log("[RECORDER] Response keys:", Object.keys(object));
     if (
       typeof object !== "object" ||
       object === null ||
       !("key" in object)
     )
-      throw new Error("No api key returned");
+      throw new Error("No api key returned. Response: " + JSON.stringify(object));
     setApiKey(object as CreateProjectKeyResponse);
   } catch (e) {
     console.error("Failed to get API key:", e);
@@ -90,22 +102,36 @@ export default function RecorderTranscriber({
 }
 
       // Create a fresh MediaRecorder instance
-      const mic = new MediaRecorder(currentMedia);
-      mic.start(500);
+      try {
+        const mic = new MediaRecorder(currentMedia);
+        
+        mic.onstart = () => {
+          console.log("[RECORDER] MediaRecorder started");
+          setMicOpen((_) => true);
+        };
 
-      mic.onstart = () => {
-        setMicOpen((_) => true);
-      };
+        mic.onstop = () => {
+          console.log("[RECORDER] MediaRecorder stopped");
+          setMicOpen((_) => false);
+        };
 
-      mic.onstop = () => {
-        setMicOpen((_) => false);
-      };
+        mic.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            add(e.data);
+          }
+        };
 
-      mic.ondataavailable = (e) => {
-        add(e.data);
-      };
+        mic.onerror = (e) => {
+          console.error("[RECORDER] MediaRecorder error:", e.error);
+        };
 
-      setRecorderTranscriber((_) => mic);
+        mic.start(500);
+        setRecorderTranscriber((_) => mic);
+      } catch (error) {
+        console.error("[RECORDER] Failed to create MediaRecorder:", error);
+        alert("Failed to start recording. Please check your microphone permissions.");
+        return;
+      }
     }
   }, [add, micOpen, userMedia, apiKey]);
 

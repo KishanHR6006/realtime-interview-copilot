@@ -79,32 +79,36 @@ export default function RecorderTranscriber({
 
       // Get API key if we don't have one
       if (!apiKey) {
-  setLoadingKey(true);
-  try {
-    const res = await fetch("/api/deepgram", { cache: "no-store" });
-    const object = await res.json();
-    console.log("[RECORDER] API response:", object);
-    console.log("[RECORDER] Has 'key'?:", "key" in object);
-    console.log("[RECORDER] Response keys:", Object.keys(object));
-    if (
-      typeof object !== "object" ||
-      object === null ||
-      !("key" in object)
-    )
-      throw new Error("No api key returned. Response: " + JSON.stringify(object));
-    setApiKey(object as CreateProjectKeyResponse);
-  } catch (e) {
-    console.error("Failed to get API key:", e);
-    setLoadingKey(false);
-    return;
-  }
-  setLoadingKey(false);
-}
+        setLoadingKey(true);
+        try {
+          const res = await fetch("/api/deepgram", { cache: "no-store" });
+          const object: unknown = await res.json();
+          console.log("[RECORDER] API response:", object);
+
+          // Type guard to check if object is valid
+          if (
+            typeof object !== "object" ||
+            object === null ||
+            !("key" in object)
+          ) {
+            throw new Error("No api key returned. Response: " + JSON.stringify(object));
+          }
+
+          console.log("[RECORDER] Has 'key'?:", "key" in object);
+          console.log("[RECORDER] Response keys:", Object.keys(object));
+          setApiKey(object as CreateProjectKeyResponse);
+        } catch (e) {
+          console.error("Failed to get API key:", e);
+          setLoadingKey(false);
+          return;
+        }
+        setLoadingKey(false);
+      }
 
       // Create a fresh MediaRecorder instance
       try {
         const mic = new MediaRecorder(currentMedia);
-        
+
         mic.onstart = () => {
           console.log("[RECORDER] MediaRecorder started");
           setMicOpen((_) => true);

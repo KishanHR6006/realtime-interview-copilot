@@ -52,7 +52,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/icons/favicon.ico" />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <PWARegister />
         {children}
       </body>

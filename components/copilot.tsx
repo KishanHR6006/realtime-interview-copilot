@@ -183,7 +183,15 @@ export function Copilot({ addInSavedData }: CopilotProps) {
           try {
             const parsed = JSON.parse(data);
             if (parsed.error) {
-              throw new Error(parsed.error);
+              // Handle error objects properly
+              let errorMessage = "An error occurred";
+              if (typeof parsed.error === 'string') {
+                errorMessage = parsed.error;
+              } else if (typeof parsed.error === 'object') {
+                // Handle nested error objects (e.g., {name, message, stack})
+                errorMessage = parsed.error.message || JSON.stringify(parsed.error);
+              }
+              throw new Error(errorMessage);
             }
 
             if (parsed.text) {
@@ -191,6 +199,8 @@ export function Copilot({ addInSavedData }: CopilotProps) {
             }
           } catch (err) {
             console.error("Error parsing SSE data:", err);
+            // Re-throw to be caught by outer catch block
+            throw err;
           }
         }
       }
@@ -235,7 +245,7 @@ export function Copilot({ addInSavedData }: CopilotProps) {
           {error.message}
         </div>
       )}
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Left Column - Interview Background & Recorder */}
         <div className="space-y-4">
@@ -252,7 +262,7 @@ export function Copilot({ addInSavedData }: CopilotProps) {
               onChange={(e) => setBg(e.target.value)}
             />
           </div>
-          
+
           <div>
             <RecorderTranscriber
               addTextinTranscription={addTextinTranscription}

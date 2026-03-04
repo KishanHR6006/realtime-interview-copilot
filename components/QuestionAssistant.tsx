@@ -9,9 +9,7 @@ interface QuestionAssistantProps {
   onQuestionSubmit?: (question: string) => void;
 }
 
-export function QuestionAssistant({
-  onQuestionSubmit,
-}: QuestionAssistantProps) {
+export function QuestionAssistant({ onQuestionSubmit }: QuestionAssistantProps) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -25,33 +23,25 @@ export function QuestionAssistant({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if user is typing in an input or textarea
       const target = e.target as HTMLElement;
-      const isTypingInInput =
-        target.tagName === "INPUT" || target.tagName === "TEXTAREA";
-
-      // K to focus input (only if not already typing)
+      const isTypingInInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
       if (e.key.toLowerCase() === "k" && !isTypingInInput) {
         e.preventDefault();
         inputRef.current?.focus();
       }
-      // Escape to clear answer
       if (e.key === "Escape" && answer) {
         e.preventDefault();
         setAnswer("");
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [answer]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!question.trim()) return;
 
     setError(null);
@@ -64,50 +54,26 @@ export function QuestionAssistant({
     try {
       const response = await fetch("/api/completion", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: question,
           flag: "copilot",
-          bg: `You are a professional interview coach helping candidates ace technical and behavioral interviews.
-
-IMPORTANT: Provide DETAILED, COMPREHENSIVE, INTERVIEW-READY answers. This is NOT for simple definitions - it's to help candidates answer interview questions perfectly.
-
-For ANY question:
-1. Start with clear definition or core concept
-2. Explain WHY it matters in interviews/industry
-3. Provide real-world examples and use cases
-4. Share key points/features/advantages they should mention
-5. Include practical tips on how to discuss this in an interview
-6. Add relevant best practices or common pitfalls to avoid
-7. Format with bullet points for clarity
-
-Guidelines:
-- NO filler words ('alright', 'umm', 'ha', 'you know', 'basically', 'like')
-- Be detailed enough that candidate can use the answer directly
-- Include examples they can mention
-- Professional and authoritative tone
-- Structure answer for easy reference during interview`,
+          // ✅ FIX 3: Short, focused system prompt = faster first token
+          bg: "Answer interview questions concisely. Direct bullet points only. Max 4 points. No filler words. No intro sentences.",
         }),
         signal: controller.current.signal,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("Response body is null");
-      }
+      if (!reader) throw new Error("Response body is null");
 
       const decoder = new TextDecoder();
       let fullAnswer = "";
 
       while (true) {
         const { done, value } = await reader.read();
-
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
@@ -115,10 +81,8 @@ Guidelines:
 
         for (const eventString of eventStrings) {
           if (!eventString.trim()) continue;
-
           const dataMatch = eventString.match(/data: (.*)/);
           if (!dataMatch) continue;
-
           const data = dataMatch[1];
           if (data === "[DONE]") continue;
 
@@ -134,12 +98,9 @@ Guidelines:
         }
       }
 
-      if (onQuestionSubmit) {
-        onQuestionSubmit(question);
-      }
+      if (onQuestionSubmit) onQuestionSubmit(question);
     } catch (err: any) {
       if (err.name !== "AbortError") {
-        console.error("Error:", err);
         setError("Failed to get answer. Please try again.");
       }
     } finally {
@@ -156,43 +117,29 @@ Guidelines:
     }
   };
 
-  // Simulate listening state
   useEffect(() => {
     setIsListening(true);
-    // Set position to right side on client
     setPosition({ x: window.innerWidth - 320, y: 80 });
-    // Load minimized preference
     const savedMinimized = localStorage.getItem("qaAssistantMinimized");
-    if (savedMinimized) {
-      setIsMinimized(JSON.parse(savedMinimized));
-    }
+    if (savedMinimized) setIsMinimized(JSON.parse(savedMinimized));
   }, []);
 
-  // Save minimized preference
   useEffect(() => {
     localStorage.setItem("qaAssistantMinimized", JSON.stringify(isMinimized));
   }, [isMinimized]);
 
-  // Handle mouse drag
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
     setIsDragging(true);
     const rect = containerRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
+    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  // Handle touch drag (mobile)
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
     setIsDragging(true);
     const rect = containerRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: e.touches[0].clientX - rect.left,
-      y: e.touches[0].clientY - rect.top,
-    });
+    setDragOffset({ x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top });
   };
 
   useEffect(() => {
@@ -201,50 +148,24 @@ Guidelines:
     const handleMouseMove = (e: MouseEvent) => {
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
-
-      // Keep within bounds - responsive box width
-      let boxWidth = 288; // w-72 default
-      if (window.innerWidth < 768) {
-        boxWidth = 256; // sm:w-64
-      }
-      if (window.innerWidth >= 1024) {
-        boxWidth = 320; // lg:w-80
-      }
-
-      const maxX = window.innerWidth - boxWidth;
-      const maxY = window.innerHeight - 100;
-
+      let boxWidth = window.innerWidth < 768 ? 256 : window.innerWidth >= 1024 ? 320 : 288;
       setPosition({
-        x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY)),
+        x: Math.max(0, Math.min(newX, window.innerWidth - boxWidth)),
+        y: Math.max(0, Math.min(newY, window.innerHeight - 100)),
       });
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       const newX = e.touches[0].clientX - dragOffset.x;
       const newY = e.touches[0].clientY - dragOffset.y;
-
-      // Keep within bounds
-      let boxWidth = 288;
-      if (window.innerWidth < 768) {
-        boxWidth = 256;
-      }
-      if (window.innerWidth >= 1024) {
-        boxWidth = 320;
-      }
-
-      const maxX = window.innerWidth - boxWidth;
-      const maxY = window.innerHeight - 100;
-
+      let boxWidth = window.innerWidth < 768 ? 256 : window.innerWidth >= 1024 ? 320 : 288;
       setPosition({
-        x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY)),
+        x: Math.max(0, Math.min(newX, window.innerWidth - boxWidth)),
+        y: Math.max(0, Math.min(newY, window.innerHeight - 100)),
       });
     };
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
+    const handleMouseUp = () => setIsDragging(false);
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -263,13 +184,8 @@ Guidelines:
     <div
       ref={containerRef}
       className="fixed w-72 lg:w-80 sm:w-64 z-40 select-none"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        cursor: isDragging ? "grabbing" : "grab",
-      }}
+      style={{ left: `${position.x}px`, top: `${position.y}px`, cursor: isDragging ? "grabbing" : "grab" }}
     >
-      {/* Listening Indicator */}
       {isListening && !isLoading && !answer && (
         <div className="mb-2 px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center gap-1.5 shadow-sm">
           <div className="flex gap-1">
@@ -277,15 +193,11 @@ Guidelines:
             <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-100" />
             <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-200" />
           </div>
-          <span className="text-white text-xs font-medium flex-1">
-            Listening...
-          </span>
+          <span className="text-white text-xs font-medium flex-1">Listening...</span>
         </div>
       )}
 
-      {/* Main Box */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-        {/* Drag Handle Header */}
         <div
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
@@ -297,18 +209,13 @@ Guidelines:
             type="button"
             onClick={() => setIsMinimized(!isMinimized)}
             className="p-1 rounded hover:bg-white hover:bg-opacity-20 transition-colors"
-            title={isMinimized ? "Expand" : "Minimize"}
           >
             {isMinimized ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
 
-        {/* Compact Input Area */}
         {!isMinimized && (
-          <form
-            onSubmit={handleSubmit}
-            className="flex items-center gap-1.5 p-2.5"
-          >
+          <form onSubmit={handleSubmit} className="flex items-center gap-1.5 p-2.5">
             <Input
               ref={inputRef}
               value={question}
@@ -316,17 +223,12 @@ Guidelines:
               placeholder="Ask... (K)"
               disabled={isLoading}
               className="flex-1 border-0 text-xs h-7 placeholder-gray-400 focus:ring-1 focus:ring-green-500 bg-white text-gray-900"
-              title="Press Escape to clear answer, K to focus"
             />
             <Button
               type="submit"
               disabled={isLoading || !question.trim()}
               onClick={isLoading ? handleStop : undefined}
-              className={`${
-                isLoading
-                  ? "bg-red-500 hover:bg-red-600"
-                  : "bg-green-600 hover:bg-green-700"
-              } text-white h-6 w-6 p-0 rounded transition-colors flex items-center justify-center`}
+              className={`${isLoading ? "bg-red-500 hover:bg-red-600" : "bg-green-600 hover:bg-green-700"} text-white h-6 w-6 p-0 rounded transition-colors flex items-center justify-center`}
               size="sm"
             >
               {isLoading ? "✕" : <SendIcon size={12} />}
@@ -334,7 +236,6 @@ Guidelines:
           </form>
         )}
 
-        {/* Loading State - Skeleton Loader */}
         {!isMinimized && isLoading && !answer && (
           <div className="px-2.5 py-2 border-t border-gray-100 bg-gray-50">
             <div className="space-y-2">
@@ -345,19 +246,13 @@ Guidelines:
           </div>
         )}
 
-        {/* Error */}
         {!isMinimized && error && (
-          <div className="px-2.5 py-1.5 border-t border-gray-100 bg-red-50 text-red-600 text-xs">
-            {error}
-          </div>
+          <div className="px-2.5 py-1.5 border-t border-gray-100 bg-red-50 text-red-600 text-xs">{error}</div>
         )}
 
-        {/* Answer */}
         {!isMinimized && answer && (
           <div className="px-2.5 py-2 border-t border-gray-100 bg-gradient-to-b from-green-50 to-white max-h-48 overflow-y-auto fade-in-answer">
-            <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
-              {answer}
-            </div>
+            <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">{answer}</div>
           </div>
         )}
       </div>

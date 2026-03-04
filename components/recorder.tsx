@@ -13,8 +13,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MicOffIcon } from "lucide-react";
 import { TranscriptionSegment, TranscriptionWord } from "@/lib/types";
-console.log('[DEBUG] Deepgram key loaded:', process.env.DEEPGRAM_API_KEY ? 'YES (length: ' + process.env.DEEPGRAM_API_KEY.length + ')' : 'MISSING');
-console.log('[DEBUG] Gemini key loaded:', process.env.GOOGLE_GENERATIVE_AI_API_KEY ? 'YES (length: ' + process.env.GOOGLE_GENERATIVE_AI_API_KEY.length + ')' : 'MISSING');
+
 interface RecorderTranscriberProps {
   addTextinTranscription: (text: string) => void;
   addTranscriptionSegment?: (segment: TranscriptionSegment) => void;
@@ -43,11 +42,9 @@ export default function RecorderTranscriber({
   const toggleRecorderTranscriber = useCallback(async () => {
     let currentMedia = userMedia;
     if (micOpen) {
-      // Stop listening
       microphone?.stop();
       setRecorderTranscriber(null);
 
-      // Close Deepgram connection
       if (connectionRef.current) {
         connectionRef.current.finish();
         connectionRef.current = null;
@@ -55,7 +52,6 @@ export default function RecorderTranscriber({
         setListening(false);
       }
     } else {
-      // Start listening
       if (!userMedia) {
         try {
           const media = await navigator.mediaDevices.getUserMedia({
@@ -77,7 +73,6 @@ export default function RecorderTranscriber({
 
       if (!currentMedia) return;
 
-      // Get API key if we don't have one
       if (!apiKey) {
         setLoadingKey(true);
         try {
@@ -85,7 +80,6 @@ export default function RecorderTranscriber({
           const object: unknown = await res.json();
           console.log("[RECORDER] API response:", object);
 
-          // Type guard to check if object is valid
           if (
             typeof object !== "object" ||
             object === null ||
@@ -94,8 +88,6 @@ export default function RecorderTranscriber({
             throw new Error("No api key returned. Response: " + JSON.stringify(object));
           }
 
-          console.log("[RECORDER] Has 'key'?:", "key" in object);
-          console.log("[RECORDER] Response keys:", Object.keys(object));
           setApiKey(object as CreateProjectKeyResponse);
         } catch (e) {
           console.error("Failed to get API key:", e);
@@ -105,17 +97,14 @@ export default function RecorderTranscriber({
         setLoadingKey(false);
       }
 
-      // Create a fresh MediaRecorder instance
       try {
         const mic = new MediaRecorder(currentMedia);
 
         mic.onstart = () => {
-          console.log("[RECORDER] MediaRecorder started");
           setMicOpen((_) => true);
         };
 
         mic.onstop = () => {
-          console.log("[RECORDER] MediaRecorder stopped");
           setMicOpen((_) => false);
         };
 
@@ -129,7 +118,8 @@ export default function RecorderTranscriber({
           console.error("[RECORDER] MediaRecorder error:", e.error);
         };
 
-        mic.start(500);
+        // ✅ FIX 1: Reduced from 500ms → 100ms for faster transcription chunks
+        mic.start(100);
         setRecorderTranscriber((_) => mic);
       } catch (error) {
         console.error("[RECORDER] Failed to create MediaRecorder:", error);
@@ -139,14 +129,11 @@ export default function RecorderTranscriber({
     }
   }, [add, micOpen, userMedia, apiKey]);
 
-  // Fetch API key only when component mounts
   useEffect(() => {
     if (isRendered.current) return;
     isRendered.current = true;
-    // API key will be fetched when user starts listening, not on mount
   }, []);
 
-  // Establish Deepgram connection only when user has clicked start AND we have an API key
   useEffect(() => {
     if (!apiKey || !micOpen || connectionRef.current) return;
 
@@ -156,6 +143,8 @@ export default function RecorderTranscriber({
       model: "nova-2",
       interim_results: true,
       smart_format: true,
+      // ✅ FIX 1b: endpointing helps Deepgram detect end of speech faster
+      endpointing: 300,
     });
 
     newConnection.on(LiveTranscriptionEvents.Open, () => {
@@ -178,7 +167,6 @@ export default function RecorderTranscriber({
         setCaption(caption);
         addTextinTranscription(caption);
 
-        // Extract detailed segment data if callback is provided
         if (addTranscriptionSegment) {
           const startTime = words.length > 0 ? (words[0].start ?? 0) : 0;
           const endTime =

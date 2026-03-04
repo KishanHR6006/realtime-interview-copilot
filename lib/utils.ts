@@ -5,20 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// ✅ FIX 4: Shorter prompt = less tokens to process = faster first response
 export function buildPrompt(bg: string | undefined, conversation: string) {
-  return `You are a interview co-pilot. You are assisting in writing responses to the interviewee's answers. You have access to the interview conversation and the background information for the interview. Write a direct response to the interviewee's question, without including any information about yourself. Create Short Response and donot create background and conversation.
---------------------------------
-BACKGROUND: ${bg}
---------------------------------
-CONVERSATION: ${conversation}
---------------------------------
-Response:`;
+  return `You are a live interview co-pilot. Give a short, direct answer to the question below. No filler. No intro. Just the answer in bullet points (max 4 bullets).
+${bg ? `CONTEXT: ${bg}\n` : ""}QUESTION: ${conversation}
+ANSWER:`;
 }
 
 export function buildSummerizerPrompt(text: string) {
-  return `You are a summerizer. You are summarizing the given text. Summarize the following text. Only write summary.
-Content:
+  return `Summarize in 3 bullet points max:
 ${text}
-Summary:
-`;
+SUMMARY:`;
 }

@@ -17,11 +17,13 @@ import { TranscriptionSegment, TranscriptionWord } from "@/lib/types";
 interface RecorderTranscriberProps {
   addTextinTranscription: (text: string) => void;
   addTranscriptionSegment?: (segment: TranscriptionSegment) => void;
+  onRecordingChange?: (isRecording: boolean) => void;
 }
 
 export default function RecorderTranscriber({
   addTextinTranscription,
   addTranscriptionSegment,
+  onRecordingChange,
 }: RecorderTranscriberProps) {
   const isRendered = useRef(false);
   const { add, remove, first, size, queue } = useQueue<any>([]);
@@ -102,10 +104,12 @@ export default function RecorderTranscriber({
 
         mic.onstart = () => {
           setMicOpen((_) => true);
+          onRecordingChange?.(true);
         };
 
         mic.onstop = () => {
           setMicOpen((_) => false);
+          onRecordingChange?.(false);
         };
 
         mic.ondataavailable = (e) => {

@@ -1,6 +1,8 @@
 export enum FLAGS {
   COPILOT = "copilot",
   SUMMERIZER = "summerizer",
+  TASK = "task",
+  MEETING = "meeting",
 }
 
 export interface HistoryData {

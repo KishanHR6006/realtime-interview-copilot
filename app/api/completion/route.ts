@@ -1,7 +1,7 @@
 import { FLAGS } from "@/lib/types";
-import { buildPrompt, buildSummerizerPrompt } from "@/lib/utils";
+import { buildPrompt, buildSummerizerPrompt, buildTaskPrompt, buildMeetingNotesPrompt } from "@/lib/utils";
 
-export const runtime = "edge"; // ✅ FIX 2b: Edge runtime = lower cold start latency
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   const {
@@ -19,6 +19,10 @@ export async function POST(req: Request) {
     prompt = buildPrompt(bg, transcribe);
   } else if (flag === FLAGS.SUMMERIZER) {
     prompt = buildSummerizerPrompt(transcribe);
+  } else if (flag === FLAGS.TASK) {
+    prompt = buildTaskPrompt(bg, transcribe);
+  } else if (flag === FLAGS.MEETING) {
+    prompt = buildMeetingNotesPrompt(transcribe);
   }
 
   const stream = new TransformStream();
@@ -42,7 +46,6 @@ export async function POST(req: Request) {
 
 function extractTextFromChunk(chunk: any): string | null {
   if (!chunk) return null;
-
   if (chunk.candidates && chunk.candidates.length > 0) {
     const candidate = chunk.candidates[0];
     const badFinishReasons = ["SAFETY", "RECITATION", "LANGUAGE", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII"];
@@ -68,15 +71,13 @@ async function streamFromGemini(
   const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY!;
   if (!API_KEY) throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY");
 
-  // ✅ FIX 2a: Direct Gemini API (no Cloudflare gateway hop) + faster model
   const MODEL_NAME = "gemini-2.0-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:streamGenerateContent?alt=sse&key=${API_KEY}`;
 
   const requestBody = JSON.stringify({
     contents: [{ parts: [{ text: prompt }], role: "user" }],
     generationConfig: {
-      // ✅ FIX 2c: Lower max tokens = faster response for live call use case
-      maxOutputTokens: 300,
+      maxOutputTokens: 400,
       temperature: 0.7,
     },
   });

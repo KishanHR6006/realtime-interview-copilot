@@ -1,5 +1,11 @@
 import { FLAGS } from "@/lib/types";
-import { buildPrompt, buildSummerizerPrompt, buildTaskPrompt, buildMeetingNotesPrompt } from "@/lib/utils";
+import {
+  buildPrompt,
+  buildSummerizerPrompt,
+  buildTaskPrompt,
+  buildMeetingNotesPrompt,
+  buildMeetingCoachPrompt,
+} from "@/lib/utils";
 
 export const runtime = "edge";
 
@@ -23,6 +29,8 @@ export async function POST(req: Request) {
     prompt = buildTaskPrompt(bg, transcribe);
   } else if (flag === FLAGS.MEETING) {
     prompt = buildMeetingNotesPrompt(transcribe);
+  } else if (flag === FLAGS.MEETING_COACH) {
+    prompt = buildMeetingCoachPrompt(bg, transcribe);
   }
 
   const stream = new TransformStream();
@@ -71,7 +79,7 @@ async function streamFromGemini(
   const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY!;
   if (!API_KEY) throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY");
 
-  const MODEL_NAME = "gemini-2.0-flash";
+  const MODEL_NAME = "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:streamGenerateContent?alt=sse&key=${API_KEY}`;
 
   const requestBody = JSON.stringify({

@@ -3,6 +3,7 @@ export enum FLAGS {
   SUMMERIZER = "summerizer",
   TASK = "task",
   MEETING = "meeting",
+  MEETING_COACH = "meeting_coach",
 }
 
 export interface HistoryData {

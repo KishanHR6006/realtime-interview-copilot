@@ -46,6 +46,14 @@ const MODE_CONFIG = {
     activeColor: "bg-green-600 text-white",
     inactiveColor: "bg-gray-100 text-gray-600 hover:bg-gray-200",
   },
+  [FLAGS.MEETING_COACH]: {
+    label: "Meeting Coach",
+    shortcut: "M",
+    description: "Live suggestions for internal meetings",
+    color: "bg-teal-600 hover:bg-teal-700",
+    activeColor: "bg-teal-600 text-white",
+    inactiveColor: "bg-gray-100 text-gray-600 hover:bg-gray-200",
+  },
 };
 
 // Auto-trigger: fire AI after this many ms of silence since last transcription
@@ -89,6 +97,7 @@ export function Copilot({ addInSavedData }: CopilotProps) {
       case "s": setFlag(FLAGS.SUMMERIZER); break;
       case "t": setFlag(FLAGS.TASK); break;
       case "n": setFlag(FLAGS.MEETING); break;
+      case "m": setFlag(FLAGS.MEETING_COACH); break;
       case "a":
         event.preventDefault();
         setAutoMode((prev) => !prev);

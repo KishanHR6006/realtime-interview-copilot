@@ -1,5 +1,11 @@
 import { FLAGS } from "@/lib/types";
-import { buildPrompt, buildSummerizerPrompt, buildTaskPrompt, buildMeetingNotesPrompt } from "@/lib/utils";
+import {
+  buildPrompt,
+  buildSummerizerPrompt,
+  buildTaskPrompt,
+  buildMeetingNotesPrompt,
+  buildMeetingCoachPrompt,
+} from "@/lib/utils";
 
 export const runtime = "edge";
 
@@ -23,6 +29,8 @@ export async function POST(req: Request) {
     prompt = buildTaskPrompt(bg, transcribe);
   } else if (flag === FLAGS.MEETING) {
     prompt = buildMeetingNotesPrompt(transcribe);
+  } else if (flag === FLAGS.MEETING_COACH) {
+    prompt = buildMeetingCoachPrompt(bg, transcribe);
   }
 
   const stream = new TransformStream();

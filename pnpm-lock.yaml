@@ -41,9 +41,6 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      insforge:
-        specifier: ^1.4.8
-        version: 1.4.8
       lucide-react:
         specifier: ^0.561.0
         version: 0.561.0(react@19.2.3)
@@ -3113,9 +3110,6 @@ packages:
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
-
-  insforge@1.4.8:
-    resolution: {integrity: sha512-A/6NPRPFQGIcVwGu2g8BIqYijb+ksfci/MZBu4vGcsC6q3fTfhpf6HGoszzMYBnOqlekDcGkyOHA9Cca81eavw==}
 
   internal-slot@1.1.0:
     resolution: {integrity: sha512-4gd7VpWNQNB4UKKCFFVcp1AVv+FMOgs9NKzjHKusc8jTMhd5eL1NqQqOpE0KzMds804/yHlglp3uxgluOqAPLw==}
@@ -8098,8 +8092,6 @@ snapshots:
   imurmurhash@0.1.4: {}
 
   inherits@2.0.4: {}
-
-  insforge@1.4.8: {}
 
   internal-slot@1.1.0:
     dependencies:

@@ -29,8 +29,11 @@ async function start(tabStreamId: string, deepgramKey: string) {
   } as unknown as MediaStreamConstraints);
 
   // Capturing the tab mutes its normal output — pipe it back to speakers so the
-  // user still hears the call while we transcribe it.
+  // user still hears the call while we transcribe it. AudioContext can start
+  // "suspended" (autoplay policy) even in an offscreen document, so explicitly
+  // resume it or the tab stays silent.
   audioContext = new AudioContext();
+  if (audioContext.state === "suspended") await audioContext.resume();
   const tabSource = audioContext.createMediaStreamSource(tabStream);
   tabSource.connect(audioContext.destination);
 

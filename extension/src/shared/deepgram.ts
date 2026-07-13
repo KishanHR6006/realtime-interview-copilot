@@ -10,10 +10,10 @@ import {
 export class DeepgramLiveTranscriber {
   private connection: LiveClient | null = null;
   private recorder: MediaRecorder | null = null;
-  private queue: Blob[] = [];
-  private isProcessing = false;
+  // Only used to buffer chunks recorded before the socket finishes opening;
+  // once listening, chunks are sent straight through as they arrive.
+  private preOpenQueue: Blob[] = [];
   private isListening = false;
-  private queueTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private apiKey: string,
@@ -33,6 +33,8 @@ export class DeepgramLiveTranscriber {
 
     connection.on(LiveTranscriptionEvents.Open, () => {
       this.isListening = true;
+      for (const blob of this.preOpenQueue) connection.send(blob);
+      this.preOpenQueue = [];
     });
 
     connection.on(LiveTranscriptionEvents.Close, () => {
@@ -56,31 +58,28 @@ export class DeepgramLiveTranscriber {
 
     const recorder = new MediaRecorder(this.stream);
     recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) this.queue.push(e.data);
+      if (e.data.size === 0) return;
+      // Send chunks as they arrive instead of batching on a fixed interval —
+      // draining slower than MediaRecorder produces (every 100ms) let the
+      // backlog grow without bound over a long call.
+      if (this.isListening) {
+        this.connection?.send(e.data);
+      } else {
+        this.preOpenQueue.push(e.data);
+      }
     };
     recorder.onerror = (e: any) => {
       this.onError(`MediaRecorder error: ${e?.error?.message ?? "unknown"}`);
     };
     recorder.start(100);
     this.recorder = recorder;
-
-    this.queueTimer = setInterval(() => this.processQueue(), 250);
-  }
-
-  private processQueue() {
-    if (this.isProcessing || this.queue.length === 0 || !this.isListening) return;
-    this.isProcessing = true;
-    const blob = this.queue.shift();
-    if (blob) this.connection?.send(blob);
-    this.isProcessing = false;
   }
 
   stop() {
-    if (this.queueTimer) clearInterval(this.queueTimer);
     this.recorder?.stop();
     this.connection?.finish();
     this.connection = null;
     this.recorder = null;
-    this.queue = [];
+    this.preOpenQueue = [];
   }
 }

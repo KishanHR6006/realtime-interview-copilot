@@ -217,12 +217,15 @@ chrome.runtime.onMessage.addListener((message: PopupToBackgroundMessage | Offscr
         };
         await updateState({ transcript: [...state.transcript, line] });
         resetAutoTriggerTimer();
+        sendResponse(true);
         break;
       }
       case "offscreen:error":
         await updateState({ error: message.message });
+        sendResponse(true);
         break;
       case "offscreen:ready":
+        sendResponse(true);
         break;
     }
   })();

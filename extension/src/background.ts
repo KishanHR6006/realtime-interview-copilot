@@ -20,7 +20,15 @@ async function persistState() {
 async function restoreState() {
   const stored = await chrome.storage.local.get("sessionState");
   if (stored.sessionState) {
-    state = { ...INITIAL_STATE, ...stored.sessionState, isRecording: false };
+    // Any in-flight recording/generation belonged to a previous service-worker
+    // lifetime and is definitely dead now — restoring it as "true" would wedge
+    // the UI (e.g. isLoadingSuggestion stuck true blocks every future request).
+    state = {
+      ...INITIAL_STATE,
+      ...stored.sessionState,
+      isRecording: false,
+      isLoadingSuggestion: false,
+    };
   }
 }
 
@@ -175,6 +183,10 @@ chrome.runtime.onMessage.addListener((message: PopupToBackgroundMessage | Offscr
         sendResponse(state);
         break;
       case "start":
+        if (state.isRecording) {
+          sendResponse(true);
+          break;
+        }
         try {
           await startSession();
         } catch (err) {

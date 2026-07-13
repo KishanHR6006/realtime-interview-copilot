@@ -16,6 +16,7 @@ function send(message: PopupToBackgroundMessage): Promise<any> {
 
 export function Popup() {
   const [state, setState] = useState<SessionState>(INITIAL_STATE);
+  const [isTogglingRecording, setIsTogglingRecording] = useState(false);
   const bgDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +43,14 @@ export function Popup() {
     bgDebounce.current = setTimeout(() => send({ type: "setBg", bg: value }), 400);
   }, []);
 
-  const toggleRecording = () => send({ type: state.isRecording ? "stop" : "start" });
+  const toggleRecording = async () => {
+    setIsTogglingRecording(true);
+    try {
+      await send({ type: state.isRecording ? "stop" : "start" });
+    } finally {
+      setIsTogglingRecording(false);
+    }
+  };
   const setFlag = (flag: FLAGS) => send({ type: "setFlag", flag });
   const toggleAuto = () => send({ type: "setAutoMode", value: !state.autoMode });
   const processNow = () => send({ type: "process" });
@@ -94,11 +102,14 @@ export function Popup() {
       <button
         type="button"
         onClick={toggleRecording}
-        className={`text-sm font-medium py-2 rounded-md text-white ${
+        disabled={isTogglingRecording}
+        className={`text-sm font-medium py-2 rounded-md text-white disabled:opacity-60 ${
           state.isRecording ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
         }`}
       >
-        {state.isRecording ? "Stop listening" : "Start listening"}
+        {isTogglingRecording
+          ? state.isRecording ? "Stopping..." : "Starting..."
+          : state.isRecording ? "Stop listening" : "Start listening"}
       </button>
 
       <div>

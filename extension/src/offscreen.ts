@@ -12,6 +12,11 @@ function send(message: OffscreenToBackgroundMessage) {
 }
 
 async function start(tabStreamId: string, deepgramKey: string) {
+  // Defense in depth against a duplicate "start" (e.g. background racing on a
+  // rapid double-click): without this, a second call would orphan the first
+  // mic/tab streams and Deepgram connections without ever stopping them.
+  if (micStream || tabStream) return;
+
   micStream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     video: false,

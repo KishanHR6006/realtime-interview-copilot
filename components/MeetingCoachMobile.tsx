@@ -32,6 +32,13 @@ export default function MeetingCoachMobile() {
   const streamRef = useRef<MediaStream | null>(null);
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  // The Deepgram WebSocket handshake is a real network round trip; on a
+  // mobile connection it can take long enough that MediaRecorder chunks
+  // start arriving before it's open, silently dropping the start of the
+  // audio. Buffer until Open fires, then flush — same fix already proven
+  // in extension/src/shared/deepgram.ts.
+  const isListeningRef = useRef(false);
+  const preOpenQueueRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("meetingCoachBg");
@@ -135,6 +142,16 @@ export default function MeetingCoachMobile() {
         endpointing: 300,
       });
 
+      connection.on(LiveTranscriptionEvents.Open, () => {
+        isListeningRef.current = true;
+        for (const blob of preOpenQueueRef.current) connection.send(blob);
+        preOpenQueueRef.current = [];
+      });
+
+      connection.on(LiveTranscriptionEvents.Close, () => {
+        isListeningRef.current = false;
+      });
+
       connection.on(LiveTranscriptionEvents.Transcript, (data) => {
         if (!data.is_final) return;
         const words = data.channel.alternatives[0].words;
@@ -150,10 +167,17 @@ export default function MeetingCoachMobile() {
       });
 
       connectionRef.current = connection;
+      isListeningRef.current = false;
+      preOpenQueueRef.current = [];
 
       const recorder = new MediaRecorder(stream);
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) connectionRef.current?.send(e.data);
+        if (e.data.size === 0) return;
+        if (isListeningRef.current) {
+          connectionRef.current?.send(e.data);
+        } else {
+          preOpenQueueRef.current.push(e.data);
+        }
       };
       recorder.start(100);
       mediaRecorderRef.current = recorder;
@@ -174,6 +198,8 @@ export default function MeetingCoachMobile() {
     mediaRecorderRef.current = null;
     connectionRef.current?.finish();
     connectionRef.current = null;
+    isListeningRef.current = false;
+    preOpenQueueRef.current = [];
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setIsRecording(false);

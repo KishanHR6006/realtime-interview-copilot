@@ -20,7 +20,15 @@ async function persistState() {
 async function restoreState() {
   const stored = await chrome.storage.local.get("sessionState");
   if (stored.sessionState) {
-    state = { ...INITIAL_STATE, ...stored.sessionState, isRecording: false };
+    // Any in-flight recording/generation belonged to a previous service-worker
+    // lifetime and is definitely dead now — restoring it as "true" would wedge
+    // the UI (e.g. isLoadingSuggestion stuck true blocks every future request).
+    state = {
+      ...INITIAL_STATE,
+      ...stored.sessionState,
+      isRecording: false,
+      isLoadingSuggestion: false,
+    };
   }
 }
 
@@ -119,11 +127,17 @@ async function runCompletion() {
           const msg = typeof parsed.error === "string" ? parsed.error : parsed.error.message;
           throw new Error(msg ?? "Unknown completion error");
         }
-        if (parsed.text) suggestion += parsed.text;
+        if (parsed.text) {
+          suggestion += parsed.text;
+          // Push each chunk as it arrives instead of waiting for the whole
+          // stream to finish — otherwise the popup shows nothing at all
+          // until the full response lands, which reads as "stuck."
+          await updateState({ suggestion });
+        }
       }
     }
 
-    await updateState({ suggestion, isLoadingSuggestion: false });
+    await updateState({ isLoadingSuggestion: false });
     chrome.action.setBadgeText({ text: "●" });
     chrome.action.setBadgeBackgroundColor({ color: "#0d9488" });
   } catch (err) {
@@ -169,6 +183,10 @@ chrome.runtime.onMessage.addListener((message: PopupToBackgroundMessage | Offscr
         sendResponse(state);
         break;
       case "start":
+        if (state.isRecording) {
+          sendResponse(true);
+          break;
+        }
         try {
           await startSession();
         } catch (err) {
@@ -211,12 +229,15 @@ chrome.runtime.onMessage.addListener((message: PopupToBackgroundMessage | Offscr
         };
         await updateState({ transcript: [...state.transcript, line] });
         resetAutoTriggerTimer();
+        sendResponse(true);
         break;
       }
       case "offscreen:error":
         await updateState({ error: message.message });
+        sendResponse(true);
         break;
       case "offscreen:ready":
+        sendResponse(true);
         break;
     }
   })();
